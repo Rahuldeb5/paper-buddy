@@ -32,14 +32,14 @@ async def upload_paper(file: UploadFile = File(...)):
 
     pdf_path = str(session_dir / "original.pdf")
 
-    text = extract_text(pdf_path)
+    text, page_count = extract_text(pdf_path)
     (session_dir / "text.txt").write_text(text)
 
     figure_paths = extract_figures(pdf_path, str(session_dir))
 
     return {
         "session_id": session_id,
-        "pages": text.count("--- Page "),
+        "pages": page_count,
         "figures_found": len(figure_paths),
         "text_preview": text[:300],
     }
