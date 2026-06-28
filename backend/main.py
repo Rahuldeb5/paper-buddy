@@ -1,7 +1,9 @@
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, File, UploadFile
+
+from extractor import extract_figures, extract_text
 
 BASE_UPLOAD_DIR = Path("uploads")
 
@@ -22,3 +24,22 @@ async def save_upload(file: UploadFile) -> tuple[str, Path]:
 @app.get("/")
 def root():
     return {"message": "hello"}
+
+
+@app.post("/upload")
+async def upload_paper(file: UploadFile = File(...)):
+    session_id, session_dir = await save_upload(file)
+
+    pdf_path = str(session_dir / "original.pdf")
+
+    text = extract_text(pdf_path)
+    (session_dir / "text.txt").write_text(text)
+
+    figure_paths = extract_figures(pdf_path, str(session_dir))
+
+    return {
+        "session_id": session_id,
+        "pages": text.count("--- Page "),
+        "figures_found": len(figure_paths),
+        "text_preview": text[:300],
+    }
