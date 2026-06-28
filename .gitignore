@@ -1,3 +1,16 @@
+# User uploads and extracted files
+backend/uploads/
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+
+# Virtual environment
+venv/
+.venv/
+
+# Test PDFs
 *.pdf
-uploads/
-__pycache__
