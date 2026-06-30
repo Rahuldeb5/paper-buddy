@@ -6,7 +6,7 @@ from google.genai import types
 
 load_dotenv()
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-3.5-flash"
 MAX_TEXT_CHARS = 500_000
 
 _ANALYSIS_SCHEMA = {
