@@ -1,122 +1,97 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [file, setFile]           = useState(null)
+  const [status, setStatus]       = useState('idle')   // 'idle' | 'uploading' | 'ready' | 'error'
+  const [sessionId, setSessionId] = useState(null)
+  const [uploadMeta, setUploadMeta] = useState(null)   // { pages, figures_found }
+  const [error, setError]         = useState(null)
+
+  function handleFileChange(e) {
+    setFile(e.target.files[0])
+    setStatus('idle')
+    setError(null)
+  }
+
+  async function handleUpload() {
+    if (!file) return
+
+    setStatus('uploading')
+    setError(null)
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await fetch('/upload', { method: 'POST', body: formData })
+
+      if (!res.ok) {
+        let detail = `Server error ${res.status}`
+        try {
+          const body = await res.json()
+          detail = body.detail ?? detail
+        } catch {}
+        throw new Error(detail)
+      }
+
+      const data = await res.json()
+      setSessionId(data.session_id)
+      setUploadMeta({ pages: data.pages, figures: data.figures_found })
+      setStatus('ready')
+    } catch (err) {
+      setError(err.message)
+      setStatus('error')
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <header>
+        <h1>Paper Buddy</h1>
+        <p>Upload a research paper and get a structured breakdown instantly.</p>
+      </header>
 
-      <div className="ticks"></div>
+      <main>
+        {status !== 'ready' && (
+          <div className="upload-card">
+            <label className="file-label">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileChange}
+                className="file-input"
+              />
+              {file ? file.name : 'Choose a PDF…'}
+            </label>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+            <button
+              onClick={handleUpload}
+              disabled={!file || status === 'uploading'}
+              className="upload-btn"
+            >
+              {status === 'uploading' ? 'Uploading…' : 'Upload'}
+            </button>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+            {status === 'error' && (
+              <p className="error-msg">{error}</p>
+            )}
+          </div>
+        )}
+
+        {status === 'ready' && (
+          <div className="ready-card">
+            <p className="ready-title">Ready to analyze</p>
+            <p className="ready-meta">
+              {uploadMeta.pages} pages · {uploadMeta.figures} figures found
+            </p>
+            <p className="ready-file">{file.name}</p>
+            <button className="analyze-btn">
+              Analyze paper →
+            </button>
+          </div>
+        )}
+      </main>
+    </div>
   )
 }
-
-export default App
