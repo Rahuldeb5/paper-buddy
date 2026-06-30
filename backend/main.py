@@ -1,9 +1,10 @@
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from extractor import extract_figures, extract_text
+from llm import analyze_paper
 
 BASE_UPLOAD_DIR = Path("uploads")
 
@@ -24,6 +25,22 @@ async def save_upload(file: UploadFile) -> tuple[str, Path]:
 @app.get("/")
 def root():
     return {"message": "hello"}
+
+
+@app.get("/analyze/{session_id}")
+def analyze(session_id: str):
+    text_file = BASE_UPLOAD_DIR / session_id / "text.txt"
+    if not text_file.exists():
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    text = text_file.read_text()
+
+    try:
+        result = analyze_paper(text)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Gemini API error: {e}")
+
+    return result
 
 
 @app.post("/upload")
