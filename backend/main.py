@@ -2,9 +2,14 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel
 
 from extractor import extract_figures, extract_text
-from llm import analyze_paper
+from llm import analyze_paper, chat_with_paper
+
+
+class ChatRequest(BaseModel):
+    question: str
 
 BASE_UPLOAD_DIR = Path("uploads")
 
@@ -25,6 +30,22 @@ async def save_upload(file: UploadFile) -> tuple[str, Path]:
 @app.get("/")
 def root():
     return {"message": "hello"}
+
+
+@app.post("/chat/{session_id}")
+def chat(session_id: str, body: ChatRequest):
+    text_file = BASE_UPLOAD_DIR / session_id / "text.txt"
+    if not text_file.exists():
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    text = text_file.read_text()
+
+    try:
+        answer = chat_with_paper(text, body.question)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Gemini API error: {e}")
+
+    return {"answer": answer}
 
 
 @app.get("/analyze/{session_id}")

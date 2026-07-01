@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/upload':  'http://localhost:8000',
       '/analyze': 'http://localhost:8000',
+      '/chat':    'http://localhost:8000',
     },
   },
 })

@@ -94,3 +94,21 @@ def analyze_paper(text: str) -> dict:
     )
 
     return response.parsed
+
+
+def chat_with_paper(text: str, question: str) -> str:
+    truncated = text[:MAX_TEXT_CHARS]
+
+    prompt = (
+        "You are a research assistant helping a reader understand an academic paper. "
+        "Answer the question below using only information from the paper. "
+        "Be concise and specific — cite section names or quote short phrases when helpful.\n\n"
+        f"PAPER TEXT:\n{truncated}\n\n"
+        f"QUESTION: {question}"
+    )
+
+    client = load_client()
+
+    response = client.models.generate_content(model=MODEL, contents=prompt)
+
+    return response.text

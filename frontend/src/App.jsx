@@ -109,13 +109,48 @@ export default function App() {
           </div>
         )}
 
-        {status === 'analyzed' && <AnalysisView data={analysis} filename={file.name} />}
+        {status === 'analyzed' && <AnalysisView data={analysis} filename={file.name} sessionId={sessionId} />}
       </main>
     </div>
   )
 }
 
-function AnalysisView({ data, filename }) {
+function AnalysisView({ data, filename, sessionId }) {
+  const [messages, setMessages] = useState([])
+  const [question, setQuestion] = useState('')
+  const [asking, setAsking]     = useState(false)
+
+  async function handleAsk() {
+    const q = question.trim()
+    if (!q || asking) return
+
+    setMessages(prev => [...prev, { role: 'user', text: q }])
+    setQuestion('')
+    setAsking(true)
+
+    try {
+      const res = await fetch(`/chat/${sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q }),
+      })
+      const data = await res.json()
+      const answer = res.ok ? data.answer : (data.detail ?? 'Something went wrong.')
+      setMessages(prev => [...prev, { role: 'ai', text: answer }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'ai', text: 'Network error — is the backend running?' }])
+    } finally {
+      setAsking(false)
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleAsk()
+    }
+  }
+
   return (
     <div className="analysis">
       <p className="analysis-filename">{filename}</p>
@@ -183,6 +218,39 @@ function AnalysisView({ data, filename }) {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="card chat-card">
+        <h2>Ask a question</h2>
+        <div className="chat-messages">
+          {messages.length === 0 && (
+            <p className="chat-empty">Ask anything about this paper…</p>
+          )}
+          {messages.map((m, i) => (
+            <div key={i} className={`chat-bubble ${m.role}`}>
+              {m.text}
+            </div>
+          ))}
+          {asking && <div className="chat-bubble ai thinking">Thinking…</div>}
+        </div>
+        <div className="chat-input-row">
+          <textarea
+            className="chat-input"
+            rows={2}
+            placeholder="e.g. Why did they use sinusoidal positional encodings?"
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={asking}
+          />
+          <button
+            className="chat-send"
+            onClick={handleAsk}
+            disabled={!question.trim() || asking}
+          >
+            Send
+          </button>
+        </div>
       </section>
     </div>
   )
